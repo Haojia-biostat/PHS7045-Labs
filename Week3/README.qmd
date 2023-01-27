@@ -1,8 +1,8 @@
 ---
 title: "Lab 03 - Functions and data.table"
 format:
-  html:
-    embed-resources: true
+  gfm:
+    default
 ---
 
 # Learning goals
