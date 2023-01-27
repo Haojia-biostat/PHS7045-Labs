@@ -115,8 +115,8 @@ get_ellips_arg(123, pi = pi)
 
      num 123
      num 3.14
-    [1] "0000027681533068"
-    [1] "0000027682401dc0"
+    [1] "00000243e833ee28"
+    [1] "00000243e93d5e60"
 
 Knit the document, commit your changes, and push them to GitHub.
 
@@ -143,7 +143,7 @@ result to the global environment using the `assign()` function. The name
 of the output must be passed as a symbol using lazy evaluation.
 
 ``` r
-assign_fit <- function(x, y, fit_name = "Nobody cares") {
+assign_fit <- function(x, y, fit_name = nobody_cares) {
   assign("fit", lm(y~x), envir = .GlobalEnv)
 }
 set.seed(7045)
