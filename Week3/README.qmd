@@ -120,7 +120,14 @@ Knit the document, commit your changes, and push them to GitHub.
 Write a function that fits a linear regression model and saves the result to the global environment using the `assign()` function. The name of the output must be passed as a symbol using lazy evaluation.
 
 ```{r}
-
+assign_fit <- function(x, y, fit_name = "Nobody cares") {
+  assign("fit", lm(y~x), envir = .GlobalEnv)
+}
+set.seed(7045)
+y <- rnorm(100)
+x <- runif(100)
+assign_fit(x = x, y = y)
+getAnywhere(fit)
 ```
 
 Knit the document, commit your changes, and push them to GitHub.

@@ -2707,8 +2707,8 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code> num 123
  num 3.14
-[1] &quot;000002421be01a78&quot;
-[1] &quot;000002421ce73eb8&quot;</code></pre>
+[1] &quot;0000021ea72115c0&quot;
+[1] &quot;0000021ea7cfa590&quot;</code></pre>
 </div>
 </div>
 <p>Knit the document, commit your changes, and push them to GitHub.</p>
@@ -2729,7 +2729,28 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="question-3-putting-all-together">Question 3: <strong>Putting all together</strong></h2>
 <p>Write a function that fits a linear regression model and saves the result to the global environment using the <code>assign()</code> function. The name of the output must be passed as a symbol using lazy evaluation.</p>
 <div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>assign_fit <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y, <span class="at">fit_name =</span> <span class="st">&quot;Nobody cares&quot;</span>) {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">assign</span>(<span class="st">&quot;fit&quot;</span>, <span class="fu">lm</span>(y<span class="sc">~</span>x), <span class="at">envir =</span> .GlobalEnv)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7045</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">100</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">assign_fit</span>(<span class="at">x =</span> x, <span class="at">y =</span> y)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="fu">getAnywhere</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>A single object matching &#39;fit&#39; was found
+It was found in the following places
+  .GlobalEnv
+with value
 
+
+Call:
+lm(formula = y ~ x)
+
+Coefficients:
+(Intercept)            x  
+     0.4409      -0.5394  </code></pre>
+</div>
 </div>
 <p>Knit the document, commit your changes, and push them to GitHub.</p>
 </section>
@@ -2743,24 +2764,24 @@ vertical-align: -.125em;
 <li><p>Load the met data from https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz, and the station data. For the latter, you can use the code we used during the lecture to pre-process the stations’ data:</p></li>
 </ol>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Download the data</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">&quot;ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv&quot;</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>stations[, USAF <span class="sc">:</span><span class="er">=</span> <span class="fu">as.integer</span>(USAF)]</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Dealing with NAs and 999999</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>stations[, USAF   <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(USAF <span class="sc">==</span> <span class="dv">999999</span>, <span class="cn">NA_integer_</span>, USAF)]</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>stations[, CTRY   <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(CTRY <span class="sc">==</span> <span class="st">&quot;&quot;</span>, <span class="cn">NA_character_</span>, CTRY)]</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>stations[, STATE  <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(STATE <span class="sc">==</span> <span class="st">&quot;&quot;</span>, <span class="cn">NA_character_</span>, STATE)]</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Selecting the three relevant columns, and keeping unique records</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> <span class="fu">unique</span>(stations[, <span class="fu">list</span>(USAF, CTRY, STATE)])</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dropping NAs</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> stations[<span class="sc">!</span><span class="fu">is.na</span>(USAF)]</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Removing duplicates</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>stations[, n <span class="sc">:</span><span class="er">=</span> <span class="dv">1</span><span class="sc">:</span>.N, by <span class="ot">=</span> .(USAF)]</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> stations[n <span class="sc">==</span> <span class="dv">1</span>,][, n <span class="sc">:</span><span class="er">=</span> <span class="cn">NULL</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Download the data</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">&quot;ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>stations[, USAF <span class="sc">:</span><span class="er">=</span> <span class="fu">as.integer</span>(USAF)]</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Dealing with NAs and 999999</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>stations[, USAF   <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(USAF <span class="sc">==</span> <span class="dv">999999</span>, <span class="cn">NA_integer_</span>, USAF)]</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>stations[, CTRY   <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(CTRY <span class="sc">==</span> <span class="st">&quot;&quot;</span>, <span class="cn">NA_character_</span>, CTRY)]</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>stations[, STATE  <span class="sc">:</span><span class="er">=</span> <span class="fu">fifelse</span>(STATE <span class="sc">==</span> <span class="st">&quot;&quot;</span>, <span class="cn">NA_character_</span>, STATE)]</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Selecting the three relevant columns, and keeping unique records</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> <span class="fu">unique</span>(stations[, <span class="fu">list</span>(USAF, CTRY, STATE)])</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dropping NAs</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> stations[<span class="sc">!</span><span class="fu">is.na</span>(USAF)]</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Removing duplicates</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>stations[, n <span class="sc">:</span><span class="er">=</span> <span class="dv">1</span><span class="sc">:</span>.N, by <span class="ot">=</span> .(USAF)]</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> stations[n <span class="sc">==</span> <span class="dv">1</span>,][, n <span class="sc">:</span><span class="er">=</span> <span class="cn">NULL</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <ol start="3" type="1">
 <li>Merge the data as we did during the lecture.</li>
@@ -2815,7 +2836,7 @@ vertical-align: -.125em;
 
 </div>
 <p>Knit the document, commit your changes, and push them to GitHub. If you’d like, you can take this time to include the link of <a href="https://github.com/UofUEpiBio/PHS7045-advanced-programming/issues/5">the issue of the week</a> so that you let us know when you are done, e.g.,</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-a</span> <span class="at">-m</span> <span class="st">&quot;Finalizing lab 3 https://github.com/UofUEpiBio/PHS7045-advanced-programming/issues/5&quot;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-a</span> <span class="at">-m</span> <span class="st">&quot;Finalizing lab 3 https://github.com/UofUEpiBio/PHS7045-advanced-programming/issues/5&quot;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 
