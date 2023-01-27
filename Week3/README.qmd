@@ -139,11 +139,21 @@ Knit the document, commit your changes, and push them to GitHub.
 
 1. Load the `data.table` (and the `dtplyr` and `dplyr` packages if you plan to work with those).
 
+```{r}
+#| label: load data.table
+library(data.table)
+```
+
 2. Load the met data from https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz, and the station data. For the latter, you can use the code we used during the lecture to pre-process the stations' data:
 
 ```{r}
+#| label: met data
+met <- fread("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz")
+str(met)
+```
+
+```{r}
 #| label: stations-data
-#| eval: false
 
 # Download the data
 stations <- fread("ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv")
@@ -163,16 +173,38 @@ stations <- stations[!is.na(USAF)]
 # Removing duplicates
 stations[, n := 1:.N, by = .(USAF)]
 stations <- stations[n == 1,][, n := NULL]
+
+str(stations)
 ```
 
 3. Merge the data as we did during the lecture.
+
+```{r}
+#| label: merge met and stations
+
+length(unique(met[,USAFID]))
+table(met[,USAFID] %in% stations[,USAF])
+
+met <- merge(met, stations, by.x = "USAFID", by.y = "USAF", all.x = T)
+head(met[, list(USAFID, WBAN, STATE)])
+```
 
 ## Question 1: Representative station for the US
 
 What is the median station in terms of temperature, wind speed, and atmospheric pressure? Look for the three weather stations that best represent the continental US using the `quantile()` function. Do these three coincide?
 
 ```{r}
-
+weathers <- c("temp", "wind.sp", "atm.press")
+# check the distribution of weathers
+lapply(met[,..weathers], summary)
+# calculate median temperature, wind speed, and atmospheric pressure by station
+med_weather_stations <- met[, lapply(.SD, median, na.rm = T), by = USAFID, .SDcols = weathers]
+# median of medians
+sapply(med_weather_stations[, ..weathers], quantile, probs = 0.5, na.rm = T)
+# locate the station with the value closest to each of the medians
+med_weather_stations[which.min(abs(temp - 23.0)), USAFID]
+med_weather_stations[which.min(abs(wind.sp - 2.6)), USAFID]
+med_weather_stations[which.min(abs(atm.press - 1014.6)), USAFID]
 ```
 
 
