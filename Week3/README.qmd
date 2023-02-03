@@ -182,9 +182,12 @@ str(stations)
 ```{r}
 #| label: merge met and stations
 
+# unique number of stations in met data
 length(unique(met[,USAFID]))
+# distribution of whether met stations present in stations data set
 table(met[,USAFID] %in% stations[,USAF])
 
+# left join two data sets
 met <- merge(met, stations, by.x = "USAFID", by.y = "USAF", all.x = T)
 head(met[, list(USAFID, WBAN, STATE)])
 ```
@@ -197,14 +200,14 @@ What is the median station in terms of temperature, wind speed, and atmospheric 
 weathers <- c("temp", "wind.sp", "atm.press")
 # check the distribution of weathers
 lapply(met[,..weathers], summary)
-# calculate median temperature, wind speed, and atmospheric pressure by station
+# calculate median of the weather conditions by station
 med_weather_stations <- met[, lapply(.SD, median, na.rm = T), by = USAFID, .SDcols = weathers]
-# median of medians
-sapply(med_weather_stations[, ..weathers], quantile, probs = 0.5, na.rm = T)
+# calculate continental median
+sapply(met[, ..weathers], quantile, probs = 0.5, na.rm = T)
 # locate the station with the value closest to each of the medians
-med_weather_stations[which.min(abs(temp - 23.0)), USAFID]
-med_weather_stations[which.min(abs(wind.sp - 2.6)), USAFID]
-med_weather_stations[which.min(abs(atm.press - 1014.6)), USAFID]
+cat("The median station in terms of temperature is", med_weather_stations[which.min(abs(temp - 23.5)), USAFID], "\n")
+cat("The median station in terms of wind speed is", med_weather_stations[which.min(abs(wind.sp - 2.1)), USAFID], "\n")
+cat("The median station in terms of atmospheric pressure is", med_weather_stations[which.min(abs(atm.press - 1014.1)), USAFID], "\n")
 ```
 
 
@@ -215,6 +218,34 @@ Knit the document, commit your changes, and Save it on GitHub. Don't forget to a
 Identify what the most representative (the median) station per state is. Instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one at the lowest latitude.
 
 ```{r}
+# calculate the median of temperature, wind speed, and atmospheric pressure by state
+med_weather_states <- met[, lapply(.SD, median, na.rm = T), by = STATE, .SDcols = weathers]
+# check missingness in the state level data
+colSums(is.na(med_weather_states))
+# print the states with no measurements in atmosphere pressure
+med_weather_states[is.na(atm.press), STATE]
+# merge data to connect stations and states together
+med_weather_states_stations <- 
+  merge(med_weather_stations, stations, all.x = T, by.x = "USAFID", by.y = "USAF") |>
+  merge(med_weather_states, by = "STATE", all.x = T, suffixes = c(".station", ".state"))
+# check number of NA's in the merged data
+colSums(is.na(med_weather_states_stations))
+# wash out stations:
+# if the state is not WA or ND, remove all the stations with any missing values
+# else, remove the stations with missing values in temp or wind.sp
+med_weather_states_stations <- na.omit(med_weather_states_stations, cols = c("temp.station", "wind.sp.station"))[is.na(atm.press.station) == is.na(atm.press.state),]
+# function to calculate the euclidean distance between two points
+eucd <- function(x,y) sqrt(sum((x-y)^2, na.rm = T))
+# calculate euclidean distance
+med_weather_states_stations$euc.dist <- 
+  sapply(1:nrow(med_weather_states_stations), \(i) {
+  eucd(
+    x = med_weather_states_stations[i, 3:5] |> unlist(),
+    y = med_weather_states_stations[i, 7:9] |> unlist()
+    )
+})
+# locate the station closest to the median level
+med_weather_states_stations[order(euc.dist), head(.SD, 1), by = STATE][, .(STATE, USAFID, euc.dist)]
 
 ```
 

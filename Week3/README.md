@@ -115,8 +115,8 @@ get_ellips_arg(123, pi = pi)
 
      num 123
      num 3.14
-    [1] "0000020384ced100"
-    [1] "000002038782f2d8"
+    [1] "0000025e058fc8c8"
+    [1] "0000025e0843ce30"
 
 Knit the document, commit your changes, and push them to GitHub.
 
@@ -258,12 +258,14 @@ str(stations)
 3.  Merge the data as we did during the lecture.
 
 ``` r
+# unique number of stations in met data
 length(unique(met[,USAFID]))
 ```
 
     [1] 1595
 
 ``` r
+# distribution of whether met stations present in stations data set
 table(met[,USAFID] %in% stations[,USAF])
 ```
 
@@ -272,6 +274,7 @@ table(met[,USAFID] %in% stations[,USAF])
     2377343 
 
 ``` r
+# left join two data sets
 met <- merge(met, stations, by.x = "USAFID", by.y = "USAF", all.x = T)
 head(met[, list(USAFID, WBAN, STATE)])
 ```
@@ -310,33 +313,33 @@ lapply(met[,..weathers], summary)
       960.5  1011.8  1014.1  1014.2  1016.4  1059.9 1666274 
 
 ``` r
-# calculate median temperature, wind speed, and atmospheric pressure by station
+# calculate median of the weather conditions by station
 med_weather_stations <- met[, lapply(.SD, median, na.rm = T), by = USAFID, .SDcols = weathers]
-# median of medians
-sapply(med_weather_stations[, ..weathers], quantile, probs = 0.5, na.rm = T)
+# calculate continental median
+sapply(met[, ..weathers], quantile, probs = 0.5, na.rm = T)
 ```
 
          temp.50%   wind.sp.50% atm.press.50% 
-             23.0           2.6        1014.6 
+             23.5           2.1        1014.1 
 
 ``` r
 # locate the station with the value closest to each of the medians
-med_weather_stations[which.min(abs(temp - 23.0)), USAFID]
+cat("The median station in terms of temperature is", med_weather_stations[which.min(abs(temp - 23.5)), USAFID], "\n")
 ```
 
-    [1] 720277
+    The median station in terms of temperature is 720501 
 
 ``` r
-med_weather_stations[which.min(abs(wind.sp - 2.6)), USAFID]
+cat("The median station in terms of wind speed is", med_weather_stations[which.min(abs(wind.sp - 2.1)), USAFID], "\n")
 ```
 
-    [1] 720113
+    The median station in terms of wind speed is 720110 
 
 ``` r
-med_weather_stations[which.min(abs(atm.press - 1014.6)), USAFID]
+cat("The median station in terms of atmospheric pressure is", med_weather_stations[which.min(abs(atm.press - 1014.1)), USAFID], "\n")
 ```
 
-    [1] 720394
+    The median station in terms of atmospheric pressure is 722420 
 
 Knit the document, commit your changes, and Save it on GitHub. Don’t
 forget to add `README.md` to the tree, the first time you render it.
@@ -347,6 +350,109 @@ Identify what the most representative (the median) station per state is.
 Instead of looking at one variable at a time, look at the euclidean
 distance. If multiple stations show in the median, select the one at the
 lowest latitude.
+
+``` r
+# calculate the median of temperature, wind speed, and atmospheric pressure by state
+med_weather_states <- met[, lapply(.SD, median, na.rm = T), by = STATE, .SDcols = weathers]
+# check missingness in the state level data
+colSums(is.na(med_weather_states))
+```
+
+        STATE      temp   wind.sp atm.press 
+            0         0         0         2 
+
+``` r
+# print the states with no measurements in atmosphere pressure
+med_weather_states[is.na(atm.press), STATE]
+```
+
+    [1] "WA" "ND"
+
+``` r
+# merge data to connect stations and states together
+med_weather_states_stations <- 
+  merge(med_weather_stations, stations, all.x = T, by.x = "USAFID", by.y = "USAF") |>
+  merge(med_weather_states, by = "STATE", all.x = T, suffixes = c(".station", ".state"))
+# check number of NA's in the merged data
+colSums(is.na(med_weather_states_stations))
+```
+
+                STATE            USAFID      temp.station   wind.sp.station 
+                    0                 0                 7                14 
+    atm.press.station              CTRY        temp.state     wind.sp.state 
+                  693                 0                 0                 0 
+      atm.press.state 
+                   21 
+
+``` r
+# wash out stations:
+# if the state is not WA or ND, remove all the stations with any missing values
+# else, remove the stations with missing values in temp or wind.sp
+med_weather_states_stations <- na.omit(med_weather_states_stations, cols = c("temp.station", "wind.sp.station"))[is.na(atm.press.station) == is.na(atm.press.state),]
+# function to calculate the euclidean distance between two points
+eucd <- function(x,y) sqrt(sum((x-y)^2, na.rm = T))
+# calculate euclidean distance
+med_weather_states_stations$euc.dist <- 
+  sapply(1:nrow(med_weather_states_stations), \(i) {
+  eucd(
+    x = med_weather_states_stations[i, 3:5] |> unlist(),
+    y = med_weather_states_stations[i, 7:9] |> unlist()
+    )
+})
+# locate the station closest to the median level
+med_weather_states_stations[order(euc.dist), head(.SD, 1), by = STATE][, .(STATE, USAFID, euc.dist)]
+```
+
+        STATE USAFID  euc.dist
+     1:    MA 725064 0.0000000
+     2:    ND 720737 0.0000000
+     3:    OH 724200 0.0000000
+     4:    WA 720388 0.0000000
+     5:    MO 723495 0.1000000
+     6:    MI 725395 0.1500000
+     7:    DE 724180 0.2000000
+     8:    WV 724176 0.2000000
+     9:    TX 722535 0.2000000
+    10:    NC 723147 0.2000000
+    11:    FL 722108 0.2061553
+    12:    VA 724019 0.2236068
+    13:    TN 723346 0.2236068
+    14:    IN 724386 0.2828427
+    15:    AL 723235 0.3000000
+    16:    WI 726435 0.3605551
+    17:    SC 723105 0.3605551
+    18:    AR 723417 0.4123106
+    19:    GA 722195 0.4123106
+    20:    IA 725450 0.4472136
+    21:    MD 723980 0.4472136
+    22:    MS 722358 0.4472136
+    23:    CT 725087 0.5000000
+    24:    ID 722142 0.5000000
+    25:    KS 724509 0.5000000
+    26:    OK 723537 0.5000000
+    27:    CA 722931 0.5024938
+    28:    IL 725305 0.5099020
+    29:    NE 725510 0.5099020
+    30:    MN 726555 0.5196152
+    31:    SD 726590 0.5385165
+    32:    NY 725194 0.5385165
+    33:    ME 726196 0.6082763
+    34:    LA 722486 0.6082763
+    35:    NJ 724090 0.6708204
+    36:    VT 725165 0.6708204
+    37:    CO 724676 0.8366600
+    38:    KY 724233 0.8366600
+    39:    AZ 722745 0.8602325
+    40:    RI 725079 0.9000000
+    41:    WY 726650 0.9273618
+    42:    PA 725130 0.9380832
+    43:    MT 726797 1.0295630
+    44:    NH 726116 1.1180340
+    45:    UT 725810 1.1661904
+    46:    NM 723650 1.2041595
+    47:    NV 725805 1.3038405
+    48:    OR 725895 1.4212670
+        STATE USAFID  euc.dist
 
 Knit the doc and save it on GitHub.
 
