@@ -9,7 +9,7 @@ date: "`r Sys.Date()`"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F, comment = "")
 options(knitr.kable.NA = "")
-options(digits = 4)
+options(digits = 6)
 ```
 
 ```{r}
@@ -21,8 +21,7 @@ rar_sim <- function(
     beta          = 0.65, # beta for all the arms in beta distribution
     K             = 1000, # number of draws in posterior distribution
     rar           = T, # logical flag of whether to use RAR (T) or equal allocation (F)
-    print_summary = T, # logical flag of whether print summary (T) or simply return max_pt_lt_p0 (F)
-    delta         = ifelse(rar, 0.9892, 0.9912)
+    delta         = ifelse(rar, 0.9892, 0.9912) # threshold to determine a successful trial
 ) {
   # function 1 - allocate participants
   # inputs: 
@@ -33,7 +32,7 @@ rar_sim <- function(
   allocation <- function(n, alloc_prob) {
     nt <- round(n*alloc_prob)
     # make sure the sum of allocated numbers equals to the input n
-    if(sum(nt) != n) nt[1] <- n - sum(nt[-1])
+    if(sum(nt, na.rm = T) != n) nt[1] <- n - sum(nt[-1], na.rm = T)
     return(nt)
   }
   
@@ -64,7 +63,7 @@ rar_sim <- function(
   # output:
   #   new allocation probability (alloc_prob), summing up to 1
   adapt_allocpr <- function(post_mat, nt) {
-    vt <- sapply(2:4, \(x) mean(apply(post_mat, 1, which.max) == x))
+    vt <- sapply(2:4, \(i) mean(apply(post_mat, 1, which.max) == i))
     v0 <- min(c(sum(vt * (nt[-1]+1) / (nt[1]+1)), max(vt)))
     return(c(v0,vt)/sum(c(v0,vt)))
   }
@@ -78,6 +77,7 @@ rar_sim <- function(
     sapply(2:4, \(i) mean(post_mat[,i] > post_mat[,1]))
   }
   
+  # define result components
   res <- vector(mode = "list", length = 5)
   names(res) <- c(
     "Design",
@@ -99,44 +99,76 @@ rar_sim <- function(
     # 3. simulate posterior probability matrix based on cum_nt and cum_sum_yt
     post_mat <- posterior_prob(colSums(res$`Num. of patients allocated (nt)`), colSums(res$`Num. of successes (sum_yt)`))
     
-    # 4.1. if the allocation for the whole trial has not been completed, calculate the adaptive allocation probability
+    # 4. if the allocation for the whole trial has not been completed, calculate the adaptive allocation probability
     if(sum(res$`Num. of patients allocated (nt)`) < N) alloc_prob <- adapt_allocpr(post_mat, nt)
-    # 4.2. else, calculate the probability that each treatment arm is better than control
+    # 5. else, calculate the probability that each treatment arm is better than control
     else res$`Pr(post_prob_t > post_prob_0)` <- prob_pt_lt_p0(post_mat)
   }
   
-  if(print_summary) {
-    colnames(res$`Num. of patients allocated (nt)`) <- colnames(res$`Num. of successes (sum_yt)`) <- 
-      c("ctrl", "arm1", "arm2", "arm3")
-    names(res$`Pr(post_prob_t > post_prob_0)`) <- c("arm1", "arm2", "arm3")
-    if(rar) {
-      res$Design <- "Response-adaptive randomization (RAR)"
-      rownames(res$`Num. of patients allocated (nt)`) <- rownames(res$`Num. of successes (sum_yt)`) <- 
-        1:nrow(res$`Num. of patients allocated (nt)`)
-      res$`Num. of patients allocated (nt)` <- addmargins(res$`Num. of patients allocated (nt)`)
-      res$`Num. of successes (sum_yt)` <- addmargins(res$`Num. of successes (sum_yt)`)
-    } else {
-      res$Design <- "Equal allocation"
-    }
-    res$Conclusion <- paste0(
-      "Comparing to the threshold of ", delta, ", the trial is a ", 
-      ifelse(max(res$`Pr(post_prob_t > post_prob_0)`) > delta, "success.", "failure.")
-    )
-    print(res)
+  colnames(res$`Num. of patients allocated (nt)`) <- colnames(res$`Num. of successes (sum_yt)`) <- 
+    c("Ctrl", "Arm1", "Arm2", "Arm3")
+  rownames(res$`Num. of patients allocated (nt)`) <- rownames(res$`Num. of successes (sum_yt)`) <- 
+    1:nrow(res$`Num. of patients allocated (nt)`)
+  names(res$`Pr(post_prob_t > post_prob_0)`) <- c("Arm1", "Arm2", "Arm3")
+  if(rar) {
+    res$Design <- "Response-adaptive randomization (RAR)"
+    res$`Num. of patients allocated (nt)` <- addmargins(res$`Num. of patients allocated (nt)`)
+    res$`Num. of successes (sum_yt)` <- addmargins(res$`Num. of successes (sum_yt)`)
+  } else {
+    res$Design <- "Equal allocation"
+    res$`Num. of patients allocated (nt)` <- addmargins(res$`Num. of patients allocated (nt)`, 2)
+    res$`Num. of successes (sum_yt)` <- addmargins(res$`Num. of successes (sum_yt)`, 2)
   }
-  else return(max(res$`Pr(post_prob_t > post_prob_0)`))
+  res$Conclusion <- paste0(
+    "Comparing to the threshold of ", delta, ", the trial is a ", 
+    ifelse(max(res$`Pr(post_prob_t > post_prob_0)`) > delta, "success.", "failure.")
+  )
+  return(res)
 }
 ```
 
 ```{r}
 set.seed(7045)
-rar_sim()
+# simulation result of equal allocation
 rar_sim(rar = F)
+# simulation result of RAR
+rar_sim()
 ```
 
-```{r, eval=FALSE}
-set.seed(7045)
-sim_equal1 <- replicate(10000, {rar_sim(rar = F, print_summary = F)})
-sim_rar1 <- replicate(10000, {rar_sim(rar = T, print_summary = F)})
+```{r}
+# parallel calculation
+library(parallel)
+cl <- makeCluster(detectCores() - 1)
+clusterExport(cl, c("rar_sim"))
 
+# replicate the design 10000 times
+set.seed(7045)
+# equal allocation
+sim_equal <- parLapply(cl, 1:10000, function(i, ...) rar_sim(rar = F))
+# RAR
+sim_rar <- parLapply(cl, 1:10000, function(i, ...) rar_sim(rar = T))
+
+# stop clustering
+stopCluster(cl)
+
+# generate the largest prob that one arm has a higher posterior rate than control
+max_pt_lt_p0_equal <- sapply(sim_equal, \(x) max(x$`Pr(post_prob_t > post_prob_0)`))
+max_pt_lt_p0_rar <- sapply(sim_rar, \(x) max(x$`Pr(post_prob_t > post_prob_0)`))
+
+# depict the distribution
+par(mfrow = c(1,2))
+hist(max_pt_lt_p0_equal, main = "Equal allocation", xlab = "")
+hist(max_pt_lt_p0_rar, main = "RAR", xlab = "")
+
+# calculate the Type I error
+mean(max_pt_lt_p0_equal >= 0.9912)
+mean(max_pt_lt_p0_rar >= 0.9892)
+
+# find threshold
+quantile(max_pt_lt_p0_equal, 0.975)
+quantile(max_pt_lt_p0_rar, 0.975)
+
+# replicate the study design assuming treatment effect is 0.35, 0.35, 0.35 and 0.65 for the arms, respectively
+rar_sim(trt_effect = c(0.35, 0.35, 0.35, 0.65), rar = F)
+rar_sim(trt_effect = c(0.35, 0.35, 0.35, 0.65))
 ```
