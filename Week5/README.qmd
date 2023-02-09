@@ -92,6 +92,7 @@ ps_matchR(x)
 ps_match1(x)
 ```
 
+In C++ the indices range from 0 to (n - 1), whereas in R is from 1 to n.
 
 ## Question 2: Things can be done faster
 

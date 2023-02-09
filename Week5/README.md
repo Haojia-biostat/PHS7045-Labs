@@ -111,6 +111,8 @@ ps_match1(x)
      [1] 0.80597008 0.05574193 0.78320645 0.05574193 0.70914982 0.45784591
      [7] 0.78320645 0.31418546 0.06227915 0.80597008
 
+In C++ the indices range from 0 to (n - 1), whereas in R is from 1 to n.
+
 ## Question 2: Things can be done faster
 
 In the previous question, we have a double loop running twice over the
