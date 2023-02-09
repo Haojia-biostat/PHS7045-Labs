@@ -19,7 +19,7 @@ The goal is simple: write out a C++ function with Rcpp and measure
 how faster it is compared to the following R implementation:
 
 
-```r
+```{r}
 ps_matchR <- function(x) {
   
   match_expected <- as.matrix(dist(x))
@@ -38,31 +38,58 @@ ps_matchR <- function(x) {
 
 Use the following pseudo-code template to get started:
 
-```cpp
+```{Rcpp}
 #include <Rcpp.h>
 
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-[output must be list] ps_match1(const NumericVector & x) {
-
-    ...prepare the output (save space)...
-    ...it should be an integer vector indicating the id of the match...
-    ...and a numeric vector with the value of `x` for the match...
-
-    for (...loop over i...) {
-
-        for (...loop over j and check if it is the optimum...) {
-            if (...the closests so far...) {
-                ...update the optimum...
-            }
-        }
+List ps_match1(const NumericVector & x) {
+  
+  int n = x.size();
+  
+  IntegerVector indices(n);
+  NumericVector values(n);
+  
+  for (int i = 0; i < n; ++i) {
+    
+    int best_n = 0;
+    double best_dist = std::numeric_limits< double >::max();
+    
+    for (int j = 0; j < n; ++j) {
+      
+      if(i == j)
+        continue;
+      
+      double tmp_dist = abs(x[i] - x[j]);
+      if(tmp_dist < best_dist){
         
+        best_dist = tmp_dist;
+        best_n    = j;
+        
+      }
+      
     }
-
-    return [a list like the R function]
-
+    
+    indices[i] = best_n;
+    values[i] = x[best_n];
+    
+  }
+  
+  return List::create(
+    _["match_id"] = indices,
+    _["match_n"] = values
+  );
+  
 }
+```
+
+```{r}
+set.seed(7045)
+x <- runif(10)
+x
+ps_matchR(x)
+ps_match1(x)
 ```
 
 
@@ -72,3 +99,5 @@ In the previous question, we have a double loop running twice over the full set
 of observations. We need you to write the C++ so that the computational
 complexity goes below `n^2`. (hint: Distance is symmetric)
 
+```{Rcpp}
+```

@@ -34,35 +34,88 @@ ps_matchR <- function(x) {
 
 Use the following pseudo-code template to get started:
 
-``` cpp
+``` rcpp
 #include <Rcpp.h>
 
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-[output must be list] ps_match1(const NumericVector & x) {
-
-    ...prepare the output (save space)...
-    ...it should be an integer vector indicating the id of the match...
-    ...and a numeric vector with the value of `x` for the match...
-
-    for (...loop over i...) {
-
-        for (...loop over j and check if it is the optimum...) {
-            if (...the closests so far...) {
-                ...update the optimum...
-            }
-        }
+List ps_match1(const NumericVector & x) {
+  
+  int n = x.size();
+  
+  IntegerVector indices(n);
+  NumericVector values(n);
+  
+  for (int i = 0; i < n; ++i) {
+    
+    int best_n = 0;
+    double best_dist = std::numeric_limits< double >::max();
+    
+    for (int j = 0; j < n; ++j) {
+      
+      if(i == j)
+        continue;
+      
+      double tmp_dist = abs(x[i] - x[j]);
+      if(tmp_dist < best_dist){
         
+        best_dist = tmp_dist;
+        best_n    = j;
+        
+      }
+      
     }
-
-    return [a list like the R function]
-
+    
+    indices[i] = best_n;
+    values[i] = x[best_n];
+    
+  }
+  
+  return List::create(
+    _["match_id"] = indices,
+    _["match_n"] = values
+  );
+  
 }
 ```
+
+``` r
+set.seed(7045)
+x <- runif(10)
+x
+```
+
+     [1] 0.88230841 0.06227915 0.80597008 0.01570025 0.61318581 0.31418546
+     [7] 0.70914982 0.45784591 0.05574193 0.78320645
+
+``` r
+ps_matchR(x)
+```
+
+    $match_id
+     [1]  3  9 10  9  7  8 10  6  2  3
+
+    $match_x
+     [1] 0.80597008 0.05574193 0.78320645 0.05574193 0.70914982 0.45784591
+     [7] 0.78320645 0.31418546 0.06227915 0.80597008
+
+``` r
+ps_match1(x)
+```
+
+    $match_id
+     [1] 2 8 9 8 6 7 9 5 1 2
+
+    $match_n
+     [1] 0.80597008 0.05574193 0.78320645 0.05574193 0.70914982 0.45784591
+     [7] 0.78320645 0.31418546 0.06227915 0.80597008
 
 ## Question 2: Things can be done faster
 
 In the previous question, we have a double loop running twice over the
 full set of observations. We need you to write the C++ so that the
 computational complexity goes below `n^2`. (hint: Distance is symmetric)
+
+``` rcpp
+```
