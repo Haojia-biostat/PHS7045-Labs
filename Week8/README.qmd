@@ -1,8 +1,9 @@
 ---
 title: "Lab 08 - RcppArmadillo + OpenMP + Slurm"
-format:
-  html:
-    embed-resources: true
+author: "Haojia Li"
+format: 
+  gfm: default
+date: "`r Sys.Date()`"
 ---
 
 # Learning goals
