@@ -97,37 +97,36 @@ RcppArmadillo + OpenMP<br>=<br><img src="https://media.giphy.com/media/WUq1cg9K7
 *   If R crashes... try running R with a debugger (see
     [Section 4.3 in Writing R extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Checking-memory-access)):
     
-    ```shell
-    ~$ R --debugger=valgrind
-    ```
-
+```shell
+~$ R --debugger=valgrind
+```
 
 ## RcppArmadillo and OpenMP workflow
 
 1.  Tell Rcpp that you need to include that in the compiler:
     
-    ```cpp
-    #include <omp.h>
-    // [[Rcpp::plugins(openmp)]]
-    ```
+```{Rcpp, eval=FALSE}
+#include <omp.h>
+// [[Rcpp::plugins(openmp)]]
+```
 
 2.  Within your function, set the number of cores, e.g
 
-    ```cpp
-    // Setting the cores
-    omp_set_num_threads(cores);
-    ```
+```{Rcpp, eval=FALSE}
+// Setting the cores
+omp_set_num_threads(cores);
+```
 
 ## RcppArmadillo and OpenMP workflow
 
 3.  Tell the compiler that you'll be running a block in parallel with OpenMP
     
-    ```cpp
-    #pragma omp [directives] [options]
-    {
-      ...your neat parallel code...
-    }
-    ```
+```{Rcpp, eval=FALSE}
+#pragma omp [directives] [options]
+{
+  ...your neat parallel code...
+}
+```
     
     You'll need to specify how OMP should handle the data:
     
