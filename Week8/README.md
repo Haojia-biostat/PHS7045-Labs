@@ -327,6 +327,102 @@ boxplot(res, unit = "ms")
 dev.off()
 ```
 
+``` rcpp
+#include <omp.h>
+#include <RcppArmadillo.h>
+using namespace Rcpp;
+
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export]]
+arma::mat K4B_v1_par(
+    arma::mat X,
+    arma::mat Y,
+    arma::vec h,
+    int cores = 1
+) {
+  
+  arma::uword n_n = X.n_rows;
+  arma::uword n_m = Y.n_cols;
+  arma::mat Nhat(n_n, n_m);
+  arma::vec Dhat(n_n);
+  arma::mat Yhat(n_n, n_m);
+  
+  // Setting the cores
+  omp_set_num_threads(cores);
+  
+#pragma omp parallel for shared(X, Y, h, n_n, n_m, Nhat, Dhat, Yhat) default(none)
+
+  for (arma::uword i = 0; i < n_n; ++i)
+  {
+    
+    const auto xrow_i = X.row(i);
+    for (arma::uword j = 0; j < n_n; ++j)
+    {
+      
+      if(i == j)
+        continue;
+      
+      arma::vec Dji_h = (X.row(j) - xrow_i) / h;
+      auto Dji_h2 = arma::pow(Dji_h, 2.0);
+      
+      double Kji_h = prod(
+        (arma::abs(Dji_h) < 1) %
+          (1.0 - 3.0 * Dji_h2) %
+          arma::pow(1.0 - Dji_h2, 2.0) * 105.0 / 64.0
+      );
+      
+      Dhat(i) += Kji_h;
+      // Dhat(j) += Kji_h;
+      
+      Nhat.row(i) += Y.row(j) * Kji_h;
+      // Nhat.row(j) += Y.row(i) * Kji_h;
+      
+    }
+    
+  }
+  
+  for (size_t i = 0u; i < n_n; ++i)
+  {
+    if (Dhat(i) != 0)
+      Yhat.row(i) = Nhat.row(i)/Dhat(i);
+  }
+  
+  return(Yhat);
+  
+}
+```
+
+``` r
+set.seed(1231)
+n <- 1000
+
+Y <- matrix(rnorm(n * n), ncol = n)
+X <- cbind(rnorm(n))
+# h <- K4B_v1_par(X, Y, 2)
+
+res <- microbenchmark::microbenchmark(
+  K4B_v1(X, Y, 2),
+  K4B_v1_par(X, Y, 2, 4),
+  check = "equal",
+  times = 10
+  )
+
+boxplot(res, unit = "ms")
+print(res, unit = "relative")
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-10-1.png)
+
+    Unit: relative
+                       expr      min       lq     mean   median       uq     max
+            K4B_v1(X, Y, 2) 4.205986 3.869732 3.720133 3.581976 3.567756 3.60879
+     K4B_v1_par(X, Y, 2, 4) 1.000000 1.000000 1.000000 1.000000 1.000000 1.00000
+     neval cld
+        10  a 
+        10   b
+
 Two ways of doing it: Single or multiple jobs (using job arrays.) To
 submit the job, I have created two bash (slurm) scripts we can submit
 with the `sbatch` function. Most of the time, we will be submitting
