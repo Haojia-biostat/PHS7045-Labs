@@ -1,0 +1,10 @@
+Loading required package: parallel
+slurmR default option for `tmp_path` (used to store auxiliar files) set to:
+  /uufs/chpc.utah.edu/common/home/u6034070
+You can change this and checkout other slurmR options using: ?opts_slurmR, or you could just type "opts_slurmR" on the terminal.
+Submitting job...Submitted batch job 7492453
+Warning messages:
+1: In normalizePath(file.path(tmp_path, job_name)) :
+  path[1]="/scratch/general/nfs1/u6034070/slurmr-job-33af102fbeec24": No such file or directory
+2: `X` is not a list. The function will coerce it into one using `as.list` 
+Pi: 3.1411844
